@@ -19,7 +19,7 @@ Then `Exit`>`Exit Saving Changes`.
 ### 2. Install GadgetDeck
 In a terminal, run
 ```shell
-curl -s https://raw.githubusercontent.com/Frederic98/GadgetDeck/main/setup | sudo bash
+curl -s https://raw.githubusercontent.com/SteinVR/GadgetDeck/main/setup | sudo bash
 ```
 This should download and install GadgetDeck and everything it needs to work. When this is done, you should have a new item in your Steam library under `non-steam`.  
 :exclamation:It is possible that it shows up as a blank tile without a name. This should be fixed after a reboot.
