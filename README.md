@@ -38,3 +38,4 @@ Not really necessary. But, to stop the USB gadgets, either reboot the Deck, or, 
 - Ethernet gadget for local multiplayer by connecting two Steam Decks to each other (Might need to disable charging on both to prevent one from draining the other)
 - MTP gadget to browse Steam Deck files from computer
 - UVC gadget for streaming game to computer without the use of an HDMI capture card
+AICODE-GadgetDeck Marker
