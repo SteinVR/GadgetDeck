@@ -11,6 +11,7 @@ ExecStartPre=/usr/share/gadget-deck/gadget-deck-manager.py enable mtp --no-activ
 ExecStart=/usr/share/gadget-deck/umtprd
 ExecStartPost=/usr/share/gadget-deck/gadget-deck-manager.py activate
 ExecStopPost=/usr/share/gadget-deck/gadget-deck-manager.py disable mtp
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
