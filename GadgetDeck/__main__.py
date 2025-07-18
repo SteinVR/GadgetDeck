@@ -1,10 +1,30 @@
 import select
 import threading
 import subprocess
+import logging
+import sys
 
 from PyQt5.QtWidgets import QApplication
 from steamworks import STEAMWORKS
 import usb_gadget
+
+logging.basicConfig(
+    filename='/var/log/gadget-deck.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+def ensure_service(service: str) -> bool:
+    """Ensure a systemd service is active."""
+    if subprocess.call(['systemctl', 'is-active', '--quiet', service]) != 0:
+        logger.info('%s not active, starting...', service)
+        result = subprocess.call(['systemctl', 'restart', service])
+        if result != 0:
+            logger.error('Failed to start %s (exit %s)', service, result)
+            return False
+    return True
 
 try:
     import joystick_ui
@@ -26,29 +46,35 @@ class JoystickEmulator:
                           'gui': ('GUI_LEFT', 'GUI_RIGHT')}
 
     def __init__(self):
+        logger.info('Starting JoystickEmulator')
         self.window = joystick_ui.JoystickUI()
 
         gadget = usb_gadget.USBGadget('gadget-deck')
         self.js_gadget = self.mouse_gadget = self.keyboard_gadget = None
         if gadget['functions'].exists('hid.joystick'):
-            print('Joystick gadget found')
+            logger.info('Joystick gadget found')
             hid_joystick = usb_gadget.HIDFunction(gadget, 'joystick')
             self.js_gadget = usb_gadget.JoystickGadget(hid_joystick.device, 2, 2, 24)
         if gadget['functions'].exists('hid.mouse'):
-            print('Mouse gadget found')
+            logger.info('Mouse gadget found')
             hid_mouse = usb_gadget.HIDFunction(gadget, 'mouse')
             self.mouse_gadget = usb_gadget.MouseGadget(hid_mouse.device, 2, 8, 2)
         if gadget['functions'].exists('hid.keyboard'):
-            print('Keyboard gadget found')
+            logger.info('Keyboard gadget found')
             hid_keyboard = usb_gadget.HIDFunction(gadget, 'keyboard')
             self.keyboard_gadget = usb_gadget.KeyboardGadget(hid_keyboard.device, 6)
             self.keyboard_gadget.set_output_report_callback(self.keyboard_state_callback)
 
         self.window.keypress.connect(self.onscreen_keypress_event)
         self.window.keyrelease.connect(self.onscreen_keyrelease_event)
-        self.steam = STEAMWORKS()
-        self.steam.initialize()
-        self.steam.Input.Init()
+        logger.info('Initializing Steamworks')
+        try:
+            self.steam = STEAMWORKS()
+            self.steam.initialize()
+            self.steam.Input.Init()
+        except Exception:
+            logger.exception('Steamworks initialization failed')
+            raise
         self.controllers = self.steam.Input.GetConnectedControllers()
         self.action_set = self.steam.Input.GetActionSetHandle(self.ACTION_SETS[0])
         self.analog_actions = {name: self.steam.Input.GetAnalogActionHandle(name) for name in self.ANALOG_ACTIONS}
@@ -113,12 +139,23 @@ class JoystickEmulator:
             self.keyboard_gadget.update()
 
 
-if __name__ == '__main__':
+def main():
+    if not ensure_service('gadget-deck-base.service'):
+        logger.error('Could not start gadget-deck-base.service')
+        return 1
     for gadget in ('joystick', 'mouse', 'keyboard'):
-        if subprocess.call(['systemctl', 'is-active', '--quiet', f'gadget-deck@{gadget}.service']) != 0:
-            print(f'Gadget {gadget} not active, starting...')
-            subprocess.call(['systemctl', 'start', f'gadget-deck@{gadget}.service'])
+        ensure_service(f'gadget-deck@{gadget}.service')
+
     app = QApplication([])
     emulator = JoystickEmulator()
     emulator.window.show()
     app.exec()
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Exception:
+        logger.exception('Fatal error running GadgetDeck')
+        raise

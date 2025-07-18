@@ -10,6 +10,7 @@ RemainAfterExit=yes
 WorkingDirectory=/usr/share/gadget-deck
 ExecStart=/usr/share/gadget-deck/gadget-deck-manager.py enable shell
 ExecStop=/usr/share/gadget-deck/gadget-deck-manager.py disable shell
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
